@@ -1,6 +1,7 @@
 import face_recognition
 import os
 import cv2
+import numpy as np
 
 
 KNOWN_FACES_DIR = 'known_faces'
@@ -40,7 +41,7 @@ for name in os.listdir(KNOWN_FACES_DIR):
         known_faces.append(encoding)
         known_names.append(name)
 
-
+print(known_names)
 print('Processing unknown faces...')
 # Now let's loop over a folder of faces we want to label
 for filename in os.listdir(UNKNOWN_FACES_DIR):
@@ -73,14 +74,41 @@ for filename in os.listdir(UNKNOWN_FACES_DIR):
 
         # We use compare_faces (but might use face_distance as well)
         # Returns array of True/False values in order of passed known_faces
-        results = face_recognition.compare_faces(known_faces[0], face_encoding, TOLERANCE)
-
+        results = []
+        for face in known_faces:
+            results.append([True] == face_recognition.compare_faces(face, face_encoding, TOLERANCE))
+        print(results)
         # Since order is being preserved, we check if any face was found then grab index
         # then label (name) of first matching known face withing a tolerance
         match = None
         if True in results:  # If at least one is true, get a name of first of found labels
-            match = known_names[results.index(True)]
+            
+            max_name = ''
+            max_value = 0
+            count = 0
+            count_true = 0
+            for index, name in enumerate(known_names):
+                if index != 0  and known_names[index] != known_names[index-1]:
+                    if (count_true / count) > max_value:
+                        max_value = count_true/count
+                        max_name = known_names[index-1]
+                    count = 0
+                    count_true = 0
+
+                
+                if results[index] == True:
+                    count_true = count_true + 1
+                count = count + 1
+            
+            print(max_name)
+            if max_name == '':
+                match = known_names[results.index(True)]
+                print(f'max_name is empty for {match}')
+            else:
+                match = max_name
+            
             print(f' - {match} from {results}')
+            known_names_np = np.array(known_names)
 
             # Each location contains positions in order: top, right, bottom, left
             top_left = (face_location[3], face_location[0])
@@ -105,5 +133,6 @@ for filename in os.listdir(UNKNOWN_FACES_DIR):
 
     # Show image
     cv2.imshow(filename, image)
-    cv2.waitKey(0)
-    cv2.destroyWindow(filename)
+    # cv2.waitKey(0)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
